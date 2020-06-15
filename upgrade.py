@@ -3,6 +3,8 @@ import os
 import time
 import requests
 import json
+import random
+import string
 from botocore.exceptions import ClientError
 from requests_aws4auth import AWS4Auth
 from elasticsearch import Elasticsearch, RequestsHttpConnection
@@ -16,22 +18,26 @@ s3_res = boto3.resource('s3')
 iam = session.client('iam')
 sts = session.client('sts')
 
+def random_string(stringLength=8):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(stringLength))
+
 # Auth
-auth_region = os.getenv('AUTH_REGION')
+aws_region = os.getenv('AWS_REGION', 'ap-southeast-2')
 
 # Elasticsearch
 old_domain_name = os.getenv('OLD_DOMAIN_NAME')
 new_domain_name = os.getenv('NEW_DOMAIN_NAME')
+create_new_domain = os.getenv('CREATE_NEW_DOMAIN', True)
 elasticsearch_version = '5.1'
-instance_type = os.getenv('INSTANCE_TYPE', 'm5.xlarge.elasticsearch')
+instance_type = os.getenv('NEW_INSTANCE_TYPE', 'm5.xlarge.elasticsearch')
 
 # S3
-bucket_name = os.getenv('BUCKET_NAME', 'es-automated-update')
-bucket_region = os.getenv('BUCKET_REGION', 'ap-southeast-2')
+bucket_name = os.getenv('BUCKET_NAME',  random_string())
 
 account_id = sts.get_caller_identity()["Account"]
 service = 'es'
-awsauth = AWS4Auth(credentials.access_key, credentials.secret_key, auth_region, service, session_token=credentials.token)
+awsauth = AWS4Auth(credentials.access_key, credentials.secret_key, aws_region, service, session_token=credentials.token)
 
 
 def check_bucket_exists():
@@ -53,13 +59,13 @@ def create_s3_bucket():
             ACL='private',
             Bucket=bucket_name,
             CreateBucketConfiguration={
-                'LocationConstraint': bucket_region
+                'LocationConstraint': aws_region
             }
         )
-        print('Bucket created')
+        print('Bucket %s created' % (bucket_name))
         return response['Location']
     else:
-        print('Bucket already exists, skipping this step')
+        print('Bucket %s already exists, skipping this step' % (bucket_name))
 
 def delete_s3_bucket():
     if check_bucket_exists():
@@ -68,9 +74,9 @@ def delete_s3_bucket():
         s3.delete_bucket(
             Bucket=bucket_name,
         )
-        print('Bucket deleted')
+        print('Bucket %s deleted' % (bucket_name))
     else:
-        print('Bucket do not exists, skipping this step')
+        print('Bucket %s do not exists, skipping this step' % (bucket_name))
 
 
 def check_es_domain_exists(domain_name):
@@ -80,7 +86,7 @@ def check_es_domain_exists(domain_name):
         )
     except ClientError as e:
         if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            # We can't find the resource that you asked for.
+            # We couldn't find the resource that you asked for.
             return False
     return True
 
@@ -105,7 +111,7 @@ def wait_es_process(domain_name):
 
 
 def create_es_domain(domain_name):
-    if not check_es_domain_exists(domain_name):
+    if not check_es_domain_exists(domain_name) and create_new_domain:
         response = es.create_elasticsearch_domain(
             DomainName=domain_name,
             ElasticsearchVersion=elasticsearch_version,
@@ -154,8 +160,7 @@ def create_policy():
         {
             "Action":[
                 "s3:GetObject",
-                "s3:PutObject",processing_status = response['DomainStatus']['Processing']
-        if processing_status == False:
+                "s3:PutObject",
                 "s3:DeleteObject",
                 "iam:PassRole"
             ],
@@ -271,7 +276,7 @@ def register_snapshot(domain_name):
         "type": "s3",
         "settings": {
             "bucket": bucket_name,
-            "region": bucket_region,
+            "region": aws_region,
             "role_arn": "arn:aws:iam::%s:role/es-snapshots-role" % (account_id)
         }
     }
@@ -465,16 +470,16 @@ if __name__ == '__main__':
     delete_policy()
     delete_role()
 
-    # Upgrade from 5.1 to 5.6
-    upgrade_es_check(new_domain_name, '5.6')
-    upgrade_es(new_domain_name, '5.6')
+    # # Upgrade from 5.1 to 5.6
+    # upgrade_es_check(new_domain_name, '5.6')
+    # upgrade_es(new_domain_name, '5.6')
 
-    # Upgrade from 5.6 to 6.8
-    reindex(new_domain_name)
-    upgrade_es_check(new_domain_name, '6.8')
-    upgrade_es(new_domain_name, '6.8')
+    # # Upgrade from 5.6 to 6.8
+    # reindex(new_domain_name)
+    # upgrade_es_check(new_domain_name, '6.8')
+    # upgrade_es(new_domain_name, '6.8')
 
-    # Upgrade from 6.8 to 7.4
-    reindex(new_domain_name)
-    upgrade_es_check(new_domain_name, '7.4')
-    upgrade_es(new_domain_name, '7.4')
+    # # Upgrade from 6.8 to 7.4
+    # reindex(new_domain_name)
+    # upgrade_es_check(new_domain_name, '7.4')
+    # upgrade_es(new_domain_name, '7.4')

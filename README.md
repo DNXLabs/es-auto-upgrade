@@ -5,9 +5,27 @@ If you are looking for something to upgrade automatically your old Elastic Searc
 The python script in this repository is responsable to upgrade your domain direct from version 2.3 to 7.4(latest), with safety checks and data integrity.
 
 
-## Dependencies
+## Setup
+
+#### Dependencies
 - Python 3
 
+#### Python Virtual Environment
+```
+# Create environment
+python3 -m venv env
+
+# To activate the environment
+source env/bin/activate
+
+# When you finish you can exit typing
+deactivate
+```
+
+#### Install dependencies
+```
+pip3 install -r requirements.txt
+```
 
 ## Usage
 
@@ -49,26 +67,21 @@ The user which is running the script need to have permission to `CRUD` bucket an
 ```bash
 export OLD_DOMAIN_NAME=test
 export NEW_DOMAIN_NAME=test-new
-export INSTANCE_TYPE=m5.xlarge.elasticsearch
-export AUTH_REGION=ap-southeast-2
-export BUCKET_REGION=ap-southeast-2
+export AWS_REGION=ap-southeast-2
 ```
 
-### Override
+### Optional Variables
 ```bash
 # Elasticsearch
-export OLD_DOMAIN_NAME=test
-export NEW_DOMAIN_NAME=test-new
-export INSTANCE_TYPE=m5.xlarge.elasticsearch
-export AUTH_REGION=ap-southeast-2
+export CREATE_NEW_DOMAIN=True
+export NEW_INSTANCE_TYPE=m5.xlarge.elasticsearch # Optional
 
 # S3
-export BUCKET_NAME=es-automated-update
-export BUCKET_REGION=ap-southeast-2
+export BUCKET_NAME=es-automated-update # Optional
 ```
 
 ## Author
-Managed by DNX Solutions.
+Managed by [DNX Solutions](contact@dnx.solutions).
 
 ## License
-Apache 2 Licensed. See LICENSE for full details.
+Apache 2 Licensed. See [LICENSE](https://github.com/DNXLabs/es-auto-upgrade/blob/master/LICENSE) for full details.
