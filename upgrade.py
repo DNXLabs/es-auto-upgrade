@@ -12,18 +12,17 @@ from elasticsearch import Elasticsearch, RequestsHttpConnection
 session = boto3.session.Session()
 credentials = boto3.Session().get_credentials()
 
-es = session.client('es')
-s3 = session.client('s3')
+aws_region = os.getenv('AWS_REGION', 'ap-southeast-2')
+
+es = session.client('es', region_name=aws_region)
+s3 = session.client('s3', region_name=aws_region)
 s3_res = boto3.resource('s3')
-iam = session.client('iam')
-sts = session.client('sts')
+iam = session.client('iam', region_name=aws_region)
+sts = session.client('sts', region_name=aws_region)
 
 def random_string(stringLength=8):
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for i in range(stringLength))
-
-# Auth
-aws_region = os.getenv('AWS_REGION', 'ap-southeast-2')
 
 # Elasticsearch
 old_domain_name = os.getenv('OLD_DOMAIN_NAME')

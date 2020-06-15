@@ -10,8 +10,8 @@ import os
 
 session = boto3.session.Session()
 credentials = boto3.Session().get_credentials()
-
-es = session.client('es')
+aws_region = os.getenv('AWS_REGION', 'ap-southeast-2')
+es = session.client('es', region_name=aws_region)
 
 def get_domain_host_endpoint(domain_name):
 
@@ -21,9 +21,8 @@ def get_domain_host_endpoint(domain_name):
     return response['DomainStatus']['Endpoint']
 
 host = get_domain_host_endpoint(os.environ['NEW_DOMAIN_NAME'])
-region = os.environ['AWS_REGION']
 service = 'es'
-awsauth = AWS4Auth(credentials.access_key, credentials.secret_key, region, service, session_token=credentials.token)
+awsauth = AWS4Auth(credentials.access_key, credentials.secret_key, aws_region, service, session_token=credentials.token)
 
 
 es = Elasticsearch(
